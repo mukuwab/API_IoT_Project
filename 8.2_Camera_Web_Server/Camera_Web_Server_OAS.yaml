@@ -1,0 +1,96 @@
+openapi: 3.0.0 #version of API format
+info:
+  title: Camera Web Server API
+  version: "1.0"
+  description: API for ESP32 camera to push and retrieve images.
+paths: # lists possible endpoints that can be called
+  /images:
+    post:
+    #post --> for sending & creating new data, endpoint will accept POST requests
+      summary: Push image from ESP32 to API
+      description: ESP32 device uploads a snapshot in base64 format.
+      
+      #requestbody--> defines what kind of data camera needs to send to make a POST request
+      requestBody:
+        required: true
+        content:
+          application/json: #incoming data will be in JSON
+            schema: #defines structure of the data
+              type: object #img = object data type
+              required: #lists mandatory feilds 
+                - image
+                - timestamp
+              properties: #lists + defines each data feild
+                image:
+                  type: string
+                  description: Base64-encoded JPEG image
+                timestamp:
+                  type: string
+                  format: date-time
+                  description: Time the image was captured
+      responses:
+        '201':
+          description: Snapshot successfully saved
+    get: #get request --> reads data
+    #will use query parameters --> extra options in URL
+    #example:  GET /images?limit=5&start=2025-10-18T00:00:00Z&end=2025-10-19T00:00:00Z
+      summary: Retrieve a list of images
+      parameters:
+        - in: query #in the URL after the ?
+          name: limit
+          schema: #defines value + data type of limit
+            type: integer 
+            default: 10
+          description: Number of snapshots to retrieve
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: date-time
+          description: Start datetime filter
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: date-time
+          description: End datetime filter
+      responses:
+        '200': #if GET request is successful
+          description: Array of snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties: #properties of each object: id, timestamp, image_url
+                    id:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+                    image_url: 
+                      type: string
+                      description: URL where the image can be accessed
+  
+  /images/latest: 
+    get:
+      summary: Retrieve the latest image
+      responses:
+        '200':
+          description: Latest image retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  image:
+                    type: string
+                    description: Base64-encoded JPEG
+                    #raw bytes of image returned, no need for cloud storage
+                    #allows for one response, w/o 2nd GET request for image
