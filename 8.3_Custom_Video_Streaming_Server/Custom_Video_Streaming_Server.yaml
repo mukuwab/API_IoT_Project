@@ -1,0 +1,42 @@
+openapi: 3.0.0
+info:
+  title: Custom Video Streaming API
+  version: "1.0"
+  description: API for ESP32 camera: view live video and control LED.
+
+servers:
+  - url: http://192.168.18.77
+    description: Local host according to sunfounder.com
+    #https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/iot_projects/ar_iot_html_cam_led.html
+
+
+paths: # lists possible endpoints that can be called, will be amended to URL
+  /stream: # endpoint for live video
+    #http://192.168.18.77/stream
+    get: #http method for data retrieval 
+      summary: Get live video
+      responses:
+        '200': #success status code
+          description: Returns live video stream
+
+  /led: #endpoint for LED manipulation
+    post: # http method for sending & creating new data
+      summary: Turn LED on or off
+      requestBody: # defines what will be sent in the post request
+        required: true
+        content:
+          application/json: #data must be sent in JSON
+            schema: # defines structure of JSON
+              type: object # JSON object
+              properties:
+                state: # LED is 'on' or 'off'
+                  type: string
+      responses:
+        '200':
+          description: LED state updated
+
+    get: # http method, retrieves current state
+      summary: Get LED state
+      responses:
+        '200':
+          description: Returns current LED state
