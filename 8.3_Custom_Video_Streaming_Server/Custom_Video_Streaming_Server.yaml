@@ -1,3 +1,6 @@
+#Would not authenticate in Azure
+
+
 openapi: 3.0.0
 info:
   title: Custom Video Streaming API
