@@ -1,0 +1,144 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "Temperature & Humidity IoT API",
+        "description": "API for uploading and retrieving temperature/humidity data from IoT devices and controlling LED state.",
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "http://tempandhumidity.azure-api.net"
+        }
+    ],
+    "paths": {
+        "/data": {
+            "post": {
+                "summary": "Upload temperature and humidity readings",
+                "description": "Upload temperature and humidity readings",
+                "operationId": "post-data",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "temperature": {
+                                        "type": "number"
+                                    },
+                                    "humidity": {
+                                        "type": "number"
+                                    },
+                                    "timestamp": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                }
+                            },
+                            "example": {
+                                "temperature": 0,
+                                "humidity": 0,
+                                "timestamp": "string"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Data stored successfully"
+                    }
+                }
+            }
+        },
+        "/data/latest": {
+            "get": {
+                "summary": "Get the latest temperature and humidity reading",
+                "description": "Get the latest temperature and humidity reading",
+                "operationId": "get-data-latest",
+                "responses": {
+                    "200": {
+                        "description": "Latest sensor values",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "temperature": {
+                                            "type": "number"
+                                        },
+                                        "humidity": {
+                                            "type": "number"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "temperature": 0,
+                                    "humidity": 0,
+                                    "timestamp": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/led": {
+            "post": {
+                "summary": "Set LED state (ON/OFF)",
+                "description": "Set LED state (ON/OFF)",
+                "operationId": "post-led",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "state": {
+                                        "enum": [
+                                            "ON",
+                                            "OFF"
+                                        ],
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "example": {
+                                "state": "ON"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "LED state updated"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "apiKeyHeader": {
+                "type": "apiKey",
+                "name": "Ocp-Apim-Subscription-Key",
+                "in": "header"
+            },
+            "apiKeyQuery": {
+                "type": "apiKey",
+                "name": "subscription-key",
+                "in": "query"
+            }
+        }
+    },
+    "security": [
+        {
+            "apiKeyHeader": []
+        },
+        {
+            "apiKeyQuery": []
+        }
+    ]
+}
