@@ -1,20 +1,18 @@
 //Aligns w/ spec--> uses HTTP REST, no longer MQTT
 
+//Azure overview >>> Gateway URL
+//https://lab1-440.azure-api.net/
 
 //Lib curl
 //aRest
 //MQTT --> data transport option
 
+//HTTP client library
+
 //try GETs and POSTs using the petstore API
   //will change the server and header when you get new API
 
 //shared access key
-
-// Adafruit project according to Sunfounder
-    //Tutorial: https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/iot_projects/ar_iot_adafruitio.html
-
-//Adafruit.com
-    //API Key: aio_NNry95KI2wW8Mb3GM1cFEjun7P1M
 
 //Dr.Glas' sample API key
   //API key: 1b4c7bde7691450ea424c9ed91230c17
@@ -34,55 +32,68 @@
 #define WLAN_SSID "UU-IoT"
 #define WLAN_PASS "0xDEADBEEF"
 
-/************************* Adafruit.io Setup *********************************/
+/*****************************************************************************/
 
 //#define AIO_SERVER "https://petstoredemo.azure-api.net/pet/1"
 //this will be changed to the azure link
 
-#define API_BASE "http://tempandhumidity.azure-api.net"
+String apiBase = "http://tempandhumidity.azure-api.net"; //actual API
+String apiBase = "https://petstoredemo.azure-api.net/pet/1";
+
 #define API_KEY  "1b4c7bde7691450ea424c9ed91230c17"
-//key will be in the header
+//sever in OPEN API spec, baseURL
 
-// Adafruit IO Account Configuration
-// (to obtain these values, visit https://io.adafruit.com and click on Active Key)
-// #define AIO_USERNAME "YOUR_ADAFRUIT_IO_USERNAME"
-// #define AIO_KEY      "YOUR_ADAFRUIT_IO_KEY"
+String apiKey  = "1b4c7bde7691450ea424c9ed91230c17";  //for API class API
+//String apiKey  = "1b4c7bde7691450ea424c9ed91230c17"; //for API example
+//shared access key server needs for authentication
+//will be included in the header
 
+#define DHTPIN 13 //pin number connected to DHT data line
+#define DHTTYPE DHT11 //defines which DHT model
 
-#define DHTPIN 13
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
-
-/************ Global State (you don't need to change this!) ******************/
-
-// WiFiFlientSecure for SSL/TLS support
-//WiFiClientSecure client;
+DHT dht(DHTPIN, DHTTYPE); //create DHT object
 
 // set pin numbers
-const int ledPin = 15;  // the number of the led pin
+const int ledPin = 15;//number of the led pin
 
-//initial set up
+/************************* Set up *********************************/
+
 void setup() {
-  Serial.begin(115200);
-  dht.begin();
-  pinMode(ledPin, OUTPUT);
+  Serial.begin(115200); //start serial communication
+  //allows printing debug messages to Serial Monitor
+  
+  dht.begin();//init DHT sensor lib
 
+  pinMode(ledPin, OUTPUT);//declare LED as output, so modes can be changed (high, low)
+
+  //Connect to Wi-fi
   Serial.println("Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+ 
+  //Loop until Wifi connects
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
   Serial.println("\nWiFi connected.");
-}
+}//end: setup
 
-//main loop
+/************************* main loop *********************************/
+
 void loop() {
+  //loop doesn't terminate after setup
+  //will read sensors and call API
+  
   if (WiFi.status() != WL_CONNECTED) return;
+  //if wifi drops, do nothing until connected again
 
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();//read temp (c) from DHT sensor
+  //returns NaN if errors
+  float humidity = dht.readHumidity();//read humditity from DHT sensor
+  //returns percentage
 
+  
   if (!isnan(temperature) && !isnan(humidity)) {
     sendSensorData(temperature, humidity);
   }

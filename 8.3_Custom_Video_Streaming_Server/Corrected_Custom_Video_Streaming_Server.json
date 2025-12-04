@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://192.168.18.77",
+      "url": "http://lab1-440.azure-api.net/custom-video-streaming-api",
       "description": "Local host according to sunfounder.com"
     }
   ],
