@@ -1,172 +1,291 @@
-//Aligns w/ spec--> uses HTTP REST, no longer MQTT
+//8.6: Temp_Humidity_Monitor
+  //https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/iot_projects/ar_iot_adafruitio.html
 
+//Reference for the LCD Display
+  //https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/basic_projects/ar_lcd.html
 
-//Lib curl
-//aRest
-//MQTT --> data transport option
-
-//try GETs and POSTs using the petstore API
-  //will change the server and header when you get new API
-
-//shared access key
-
-// Adafruit project according to Sunfounder
-    //Tutorial: https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/iot_projects/ar_iot_adafruitio.html
-
-//Adafruit.com
-    //API Key: aio_NNry95KI2wW8Mb3GM1cFEjun7P1M
-
-//Dr.Glas' sample API key
-  //API key: 1b4c7bde7691450ea424c9ed91230c17
-
-//API Example
-//GET https://petstoredemo.azure-api.net/pet/1 HTTP/1.1
-//Ocp-Apim-Subscription-Key: 1b4c7bde7691450ea424c9ed91230c17
- 
-//IMPORTS//
-#include <WiFi.h> //wifi library, enables wifi conenction
-#include <HTTPClient.h> //provides methods for HTTP request
+//=--LIBRARIES--=//
+#include <WiFi.h>//handles wifi connection
+#include <HTTPClient.h>//allows sending GET & POSTs
 #include <ArduinoJson.h> //JSON helper libaray for parsing JSON
 #include "DHT.h" //DHT sensor library, (pin, type), used to obtain sensor values
+#include <LiquidCrystal_I2C.h>//control I2C LCD display
+#include <Wire.h>//control I2C LCD display
 
-/************************* WiFi Access Point *********************************/
+//network credentials
+// const char* ssid = "UU-IoT";
+// const char* password = "0xDEADBEEF";
 
-#define WLAN_SSID "UU-IoT"
-#define WLAN_PASS "0xDEADBEEF"
+const char* ssid = "Monica wifi";
+const char* password = "3368844443";
 
-/************************* Adafruit.io Setup *********************************/
+  //API URL
+  //String apiUrl = "https://petstoredemo.azure-api.net/pet/1"; //test
+String apiUrl = "https://tempandhumidity.azure-api.net";
 
-//#define AIO_SERVER "https://petstoredemo.azure-api.net/pet/1"
-//this will be changed to the azure link
+//subscription key
+//String subscriptionKey = "1b4c7bde7691450ea424c9ed91230c17"; //test
+String subscriptionKey  = "8569409e123b49dd9c726ca24c6c9f9b";  //for API class API
+  //shared access key server needs for authentication
+  //will be included in the header
 
-#define API_BASE "http://tempandhumidity.azure-api.net"
-#define API_KEY  "1b4c7bde7691450ea424c9ed91230c17"
-//key will be in the header
+#define DHTPIN 13 //pin number connected to DHT data line
+#define DHTTYPE DHT11 //defines which DHT model
 
-// Adafruit IO Account Configuration
-// (to obtain these values, visit https://io.adafruit.com and click on Active Key)
-// #define AIO_USERNAME "YOUR_ADAFRUIT_IO_USERNAME"
-// #define AIO_KEY      "YOUR_ADAFRUIT_IO_KEY"
-
-
-#define DHTPIN 13
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
-
-/************ Global State (you don't need to change this!) ******************/
-
-// WiFiFlientSecure for SSL/TLS support
-//WiFiClientSecure client;
+DHT dht(DHTPIN, DHTTYPE); //create DHT object
+  //used to call functions such as: dht.readTemperatureF
 
 // set pin numbers
-const int ledPin = 15;  // the number of the led pin
+const int ledPin = 15;//number of the led pin
 
-//initial set up
+LiquidCrystal_I2C lcd(0x27,16,2);// set the LCD address to 0x27 for a 16 chars and 2 line display
+
+// Forward declarations
+  //need to declare functions before setup() so compiler knows they exsist
+void makeApiRequest();
+void sendSensorData(float temp, float hum);
+void getLatestReading();
+void checkLEDState();
+String getTimeString();
+
 void setup() {
+  
   Serial.begin(115200);
-  dht.begin();
-  pinMode(ledPin, OUTPUT);
+  //start serial monitor at 115200 baud for debugging
+  //top right magnifying glass
 
-  Serial.println("Connecting to WiFi...");
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  Serial.println("Starting setup...");
+  //print set-up feedback to serial monitor
+
+  dht.begin();//init DHT sensor lib
+
+  pinMode(ledPin, OUTPUT);//declare LED as output, so modes can be changed (high, low)
+
+  // Initialize LCD
+  lcd.init();// initialize the lcd 
+  lcd.backlight(); // Turns on the LCD backlight.
+  lcd.setCursor(0, 0);//set cursor to column 0, row 0
+  lcd.print("Starting...");
+    //will be on first row
+
+  WiFi.begin(ssid, password);
+  // Connect to WiFi w/ credentials
+
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  
+  //loop until connected
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi connected.");
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nConnected");
+    makeApiRequest();
+  } 
+  
+  else {
+    Serial.println("\nWiFi failed. Continuing without network...");
+  }
 }
 
-//main loop
+
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) return;
+  //loop doesn't terminate after setup
+  //will read sensors and call API
 
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
 
-  if (!isnan(temperature) && !isnan(humidity)) {
-    sendSensorData(temperature, humidity);
+  //read + store sensor data
+  float temperatureC = dht.readTemperature();//read temp (c) from DHT sensor
+  float temperatureF = (temperatureC * 9.0 / 5.0) + 32.0;  // Fahrenheit
+    //returns NaN if errors
+  
+  float humidity = dht.readHumidity();//read humditity from DHT sensor
+    //returns percentage
+
+
+  //Print sensor values to the serial monitor for testing
+  Serial.print("Temperature (F): ");
+  Serial.println(temperatureF);
+ 
+  Serial.print("Humidity (%): ");
+  Serial.println(humidity);
+
+  //display on LCD
+  lcd.setCursor(0, 0);//sets cursor at row 1
+  lcd.print("Temp: ");
+  lcd.print(temperatureF);
+  lcd.print((char)223); // degree symbol
+  lcd.print("F  ");
+
+  lcd.setCursor(0, 1);//sets cursor at row 2
+  lcd.print("Hum: ");
+  lcd.print(humidity);
+  lcd.print("%   ");
+
+  if (!isnan(temperatureC) && !isnan(humidity)) {
+    sendSensorData(temperatureC, humidity);
+    getLatestReading();//Show what server stored
+    checkLEDState();//Update LED state from server
   }
 
-  getLatestReading();       // Show what server stored
-  checkLEDState();          // Update LED state from server
+  delay(8000);
+  // float temperature = dht.readTemperature();
+  // float humidity = dht.readHumidity();
 
-  delay(8000);              // Adjust as needed
 }
 
 //Post the temperature and humidity data
 void sendSensorData(float temp, float hum) {
+  //pass in temp and hum as parameters, done in forward declaration
+  
+  //create HTTP client
   HTTPClient http;
+    //allows for GET and POST requests to API
 
-  String url = apiBase + "/data";
+  //build URL for data endpoint
+  String url = apiUrl + "/data";
 
+  //initalize HTTP request
   http.begin(url);
+  
+  //Header
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("Ocp-Apim-Subscription-Key", apiKey);
+  http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
-  String body = "{ \"temperature\": " + String(temp) +
+  //JSON body
+  String body = "{\"temperature\": " + String(temp) +
                 ", \"humidity\": " + String(hum) +
-                ", \"timestamp\": \"" + getTimeString() + "\" }";
+                ", \"timestamp\": \"" + getTimeString() + "\"}";
 
+  Serial.println("POST Body:");
+  Serial.println(body);
+
+  //Send json body in POST
   int code = http.POST(body);
 
-  Serial.print("POST /data → ");
+  //print to serial monitor for testing
+  Serial.print("POST /data: ");
   Serial.println(code);
 
-  http.end();
+  http.end();//end HTTP client
 }
 
+//GET
+void makeApiRequest() {
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    
+    //Create HTTP client object for GET request
+    HTTPClient http;
 
-//get data and latest
+    //begin request to URL
+    http.begin(apiUrl);
+
+    //header
+    http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+    //send GET
+    int httpResponseCode = http.GET();
+
+    //print response to serial monitor
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+
+    //If success, print body
+    if (httpResponseCode > 0) {
+      String payload = http.getString();
+      Serial.println("Response:");
+      Serial.println(payload);
+    } else {
+      Serial.println("Request failed!");
+    }
+
+    http.end();//http client
+  
+  } else {
+    Serial.println("WiFi not connected.");
+  }
+}
+
+//GET
 void getLatestReading() {
+  
+  //Create HTTP client object for GET request
   HTTPClient http;
 
-  http.begin(apiBase + "/data/latest");
-  http.addHeader("Ocp-Apim-Subscription-Key", apiKey);
+  http.begin(apiUrl+"/data/latest");//build url
+  
+  //header, GET only needs key 
+  http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
+  //send GET
   int code = http.GET();
-  Serial.print("GET /data/latest → ");
+
+  Serial.print("GET /data/latest: ");
   Serial.println(code);
 
+  //if successful print to serial monitor
   if (code == 200) {
     String response = http.getString();
-    Serial.println("Latest Data: " + response);
+    Serial.println("Latest Data: "+ response);
   }
 
   http.end();
 }
 
-/***********************************************************
- *               POST /led   → Get LED State From Server
- ***********************************************************/
+//Get LED state from server
 void checkLEDState() {
-  // For class demo we assume teacher will POST {"state":"ON"} or {"state":"OFF"}
+  //will POST {"state":"ON"} or {"state":"OFF"}
 
-  HTTPClient http;
-  http.begin(apiBase + "/led");
+  HTTPClient http;//new client obj.
+ 
+  http.begin(apiUrl+"/led");//build url
+ 
+  //header
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("Ocp-Apim-Subscription-Key", apiKey);
+  http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
-  // Dummy request so server can respond
+  //ask server for led state
   int code = http.POST("{\"state\":\"CHECK\"}");
 
+  //print response if successful
   if (code == 200) {
     String response = http.getString();
     Serial.println("LED Response: " + response);
 
+    //check led state: on or off
     if (response.indexOf("ON") > -1) {
-      digitalWrite(ledPin, HIGH);
-    } else if (response.indexOf("OFF") > -1) {
-      digitalWrite(ledPin, LOW);
+      //method for reading response + checking for ON
+     
+      digitalWrite(ledPin, HIGH);//turn on LED
+    } 
+    
+    else if (response.indexOf("OFF") > -1) {
+        //method for reading response + checking for OFF
+     
+      digitalWrite(ledPin, LOW);//turn off LED
     }
   }
+  
+  //print values to serial monitor
+  Serial.print("POST /led code: ");
+  Serial.println(code);
+
+  String payload = http.getString();
+  Serial.println("LED Payload:");
+  Serial.println(payload);
+
 
   http.end();
 }
 
-
-//Basic time loop
+//Basic time stamp function
 String getTimeString() {
-  // Real projects use RTC or NTP; this is OK for class assignment
   unsigned long ms = millis();
-  return "2025-12-02T" + String((ms/1000)%60) + ":00Z";
+  return "2025-12-02  "+ 
+  String((ms/1000)%60)+ ":00";//convert to seconds
 }
+
+
