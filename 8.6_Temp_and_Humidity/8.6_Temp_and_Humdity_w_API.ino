@@ -21,8 +21,8 @@ const char* password = "3368844443";
 
   //API URL
   //String apiUrl = "https://petstoredemo.azure-api.net/pet/1"; //test
-String apiUrl = "http://tempandhumidity.azure-api.net";
-// String apiUrl = "http://lab1-440.azure-api.net/temp-and-humidity";
+// String apiUrl = "http://tempandhumidity.azure-api.net";
+String apiUrl = "http://lab1-440.azure-api.net/temp-and-humidity";
 //subscription key
 //String subscriptionKey = "1b4c7bde7691450ea424c9ed91230c17"; //test
 String subscriptionKey  = "edb15d72f99f49479cedd9f83db5fbd0";  //for API class API
