@@ -21,11 +21,11 @@ const char* password = "3368844443";
 
   //API URL
   //String apiUrl = "https://petstoredemo.azure-api.net/pet/1"; //test
-String apiUrl = "https://tempandhumidity.azure-api.net";
-
+String apiUrl = "http://tempandhumidity.azure-api.net";
+// String apiUrl = "http://lab1-440.azure-api.net/temp-and-humidity";
 //subscription key
 //String subscriptionKey = "1b4c7bde7691450ea424c9ed91230c17"; //test
-String subscriptionKey  = "8569409e123b49dd9c726ca24c6c9f9b";  //for API class API
+String subscriptionKey  = "edb15d72f99f49479cedd9f83db5fbd0";  //for API class API
   //shared access key server needs for authentication
   //will be included in the header
 
@@ -45,7 +45,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);// set the LCD address to 0x27 for a 16 chars a
 void makeApiRequest();
 void sendSensorData(float temp, float hum);
 void getLatestReading();
-void checkLEDState();
+void checkLEDState(float temperatureF);
 String getTimeString();
 
 void setup() {
@@ -127,7 +127,7 @@ void loop() {
   if (!isnan(temperatureC) && !isnan(humidity)) {
     sendSensorData(temperatureC, humidity);
     getLatestReading();//Show what server stored
-    checkLEDState();//Update LED state from server
+    checkLEDState(temperatureF);//Update LED state from server
   }
 
   delay(8000);
@@ -155,9 +155,13 @@ void sendSensorData(float temp, float hum) {
   http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
   //JSON body
+  // String body = "{\"temperature\": " + String(temp) +
+  //               ", \"humidity\": " + String(hum) +
+  //               ", \"timestamp\": \"" + getTimeString() + "\"}";
+
   String body = "{\"temperature\": " + String(temp) +
-                ", \"humidity\": " + String(hum) +
-                ", \"timestamp\": \"" + getTimeString() + "\"}";
+              ", \"humidity\": " + String(hum) +
+              ", \"timestamp\": \"" + getTimeString() + "\"}";
 
   Serial.println("POST Body:");
   Serial.println(body);
@@ -236,7 +240,7 @@ void getLatestReading() {
 }
 
 //Get LED state from server
-void checkLEDState() {
+void checkLEDState(float temperatureF) {
   //will POST {"state":"ON"} or {"state":"OFF"}
 
   HTTPClient http;//new client obj.
@@ -247,45 +251,81 @@ void checkLEDState() {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
-  //ask server for led state
-  int code = http.POST("{\"state\":\"CHECK\"}");
+  // Turn LED ON if temp > 80F, OFF otherwise
+  String state = (temperatureF > 80) ? "ON" : "OFF";
+  int code = http.POST("{\"state\":\"" + state + "\"}");
+  digitalWrite(ledPin, state == "ON" ? HIGH : LOW);
 
   //print response if successful
-  if (code == 200) {
-    String response = http.getString();
-    Serial.println("LED Response: " + response);
+  // if (code == 200) {
+  //   String response = http.getString();
+  //   Serial.println("LED Response: " + response);
 
-    //check led state: on or off
-    if (response.indexOf("ON") > -1) {
-      //method for reading response + checking for ON
+  //   //check led state: on or off
+  //   if (response.indexOf("ON") > -1) {
+  //     //method for reading response + checking for ON
      
-      digitalWrite(ledPin, HIGH);//turn on LED
-    } 
+  //     digitalWrite(ledPin, HIGH);//turn on LED
+  //   } 
     
-    else if (response.indexOf("OFF") > -1) {
-        //method for reading response + checking for OFF
+  //   else if (response.indexOf("OFF") > -1) {
+  //       //method for reading response + checking for OFF
      
-      digitalWrite(ledPin, LOW);//turn off LED
-    }
-  }
-  
-  //print values to serial monitor
+  //     digitalWrite(ledPin, LOW);//turn off LED
+  //   }
+
   Serial.print("POST /led code: ");
   Serial.println(code);
 
-  String payload = http.getString();
-  Serial.println("LED Payload:");
-  Serial.println(payload);
+  if (code > 0) {
+    String response = http.getString();
+    Serial.println("LED Response: " + response);
+  } else {
+    Serial.println("LED POST failed");
+  }
 
+  digitalWrite(ledPin, state == "ON" ? HIGH : LOW);
 
   http.end();
-}
+  }
+  
+  // //print values to serial monitor
+  // Serial.print("POST /led code: ");
+  // Serial.println(code);
 
-//Basic time stamp function
+  // String payload = http.getString();
+  // Serial.println("LED Payload:");
+  // Serial.println(payload);
+
+
+  // http.end();
+
+
+// String getTimeString() {
+//   unsigned long ms = millis() / 1000; // seconds since boot
+
+//   int hours = (ms / 3600) % 24;
+//   int minutes = (ms / 60) % 60;
+//   int seconds = ms % 60;
+
+//   //ISO-8601 format for API compatibility
+//   char buffer[30];
+//   sprintf(buffer, "2025-12-02T%02d:%02d:%02dZ", hours, minutes, seconds);
+
+//   return String(buffer);
+// }
+
 String getTimeString() {
-  unsigned long ms = millis();
-  return "2025-12-02  "+ 
-  String((ms/1000)%60)+ ":00";//convert to seconds
+  unsigned long ms = millis() / 1000; // seconds since boot
+
+  int hours = (ms / 3600) % 24;
+  int minutes = (ms / 60) % 60;
+  int seconds = ms % 60;
+
+  char buffer[30];
+  sprintf(buffer, "2025-12-02T%02d:%02d:%02dZ", hours, minutes, seconds);
+
+  return String(buffer);
 }
 
 
