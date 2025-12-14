@@ -1,0 +1,138 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "Custom Video Streaming API",
+        "description": "API for ESP32 camera: view live video and control LED.",
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "http://lab1-440.azure-api.net/custom-video-streaming-api"
+        }
+    ],
+    "paths": {
+        "/stream": {
+            "get": {
+                "summary": "Get live video",
+                "description": "Get live video",
+                "operationId": "get-stream",
+                "responses": {
+                    "200": {
+                        "description": "Returns live video stream",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                },
+                                "examples": {
+                                    "default": {
+                                        "value": null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/led": {
+            "post": {
+                "summary": "Turn LED on or off",
+                "description": "Turn LED on or off",
+                "operationId": "post-led",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "state"
+                                ],
+                                "type": "object",
+                                "properties": {
+                                    "state": {
+                                        "enum": [
+                                            "on",
+                                            "off"
+                                        ],
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "example": {
+                                "state": "on"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "LED state updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "state": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "state": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Get LED state",
+                "description": "Get LED state",
+                "operationId": "get-led",
+                "responses": {
+                    "200": {
+                        "description": "Returns current LED state",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "state": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "state": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "apiKeyHeader": {
+                "type": "apiKey",
+                "name": "Ocp-Apim-Subscription-Key",
+                "in": "header"
+            },
+            "apiKeyQuery": {
+                "type": "apiKey",
+                "name": "subscription-key",
+                "in": "query"
+            }
+        }
+    },
+    "security": [
+        {
+            "apiKeyHeader": []
+        },
+        {
+            "apiKeyQuery": []
+        }
+    ]
+}

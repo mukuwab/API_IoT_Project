@@ -1,0 +1,89 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "When_an_HTTP_request_is_received": {
+                "type": "Request",
+                "kind": "Http"
+            }
+        },
+        "actions": {
+            "HTTP_GET_LED": {
+                "runAfter": {},
+                "type": "Http",
+                "inputs": {
+                    "uri": "http://lab1-440.azure-api.net/custom-video-streaming-api/led",
+                    "method": "GET",
+                    "headers": {
+                        "Ocp-Apim-Subscription-Key": "78fcf7e3fcec486fa55c3d20965d35f0"
+                    }
+                },
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                }
+            },
+            "Post_message_in_a_chat_or_channel": {
+                "runAfter": {
+                    "HTTP_GET_LED": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['teams']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "body": {
+                        "recipient": {
+                            "groupId": "2bedee4c-8fff-4d5c-a5d4-cf3e23df5fb6",
+                            "channelId": "19:97d9c2aca4154416accd68e8871b92e5@thread.tacv2"
+                        },
+                        "messageBody": "<p class=\"editor-paragraph\">LED state requested. Current state: @{body('HTTP_GET_LED')?['state']}</p>"
+                    },
+                    "path": "/beta/teams/conversation/message/poster/Flow bot/location/@{encodeURIComponent('Channel')}"
+                }
+            },
+            "Response": {
+                "runAfter": {
+                    "Post_message_in_a_chat_or_channel": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "body": {
+                        "state": "@{body('HTTP_GET_LED')?['state']}"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "type": "Object",
+            "value": {
+                "teams": {
+                    "id": "/subscriptions/f817be69-0886-4dee-a445-067adb511a35/providers/Microsoft.Web/locations/centralus/managedApis/teams",
+                    "connectionId": "/subscriptions/f817be69-0886-4dee-a445-067adb511a35/resourceGroups/CSC-440-Labs/providers/Microsoft.Web/connections/teams-1",
+                    "connectionName": "teams-1",
+                    "connectionProperties": {}
+                }
+            }
+        }
+    }
+}
